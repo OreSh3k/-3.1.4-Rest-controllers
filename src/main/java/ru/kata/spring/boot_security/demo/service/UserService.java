@@ -8,7 +8,7 @@ import java.util.Optional;
 
 public interface UserService {
 
-    public void updateUser(User user);
+
 
     Optional<User> findByUsername(String username);
 

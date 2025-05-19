@@ -1,75 +1,63 @@
-package ru.kata.spring.boot_security.demo.controller;
-
-
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import ru.kata.spring.boot_security.demo.model.Role;
+import org.springframework.web.bind.annotation.*;
 import ru.kata.spring.boot_security.demo.model.User;
-import ru.kata.spring.boot_security.demo.service.AdminService;
-import ru.kata.spring.boot_security.demo.service.RoleService;
+import ru.kata.spring.boot_security.demo.service.UserService;
 
-import java.util.Set;
+import java.util.List;
 
-@Controller
+@RestController
+@RequestMapping("/api/admin/users")
+@PreAuthorize("hasRole('ADMIN')")
 public class AdminController {
 
-    private AdminService adminService;
-    private RoleService roleService;
-    private PasswordEncoder passwordEncoder;
+    private final UserService userService;
+    private final PasswordEncoder passwordEncoder;
 
     @Autowired
-    public AdminController(AdminService adminService,
-                           RoleService roleService,
-                           PasswordEncoder passwordEncoder) {
-        this.adminService = adminService;
-        this.roleService = roleService;
+    public AdminController(UserService userService, PasswordEncoder passwordEncoder) {
+        this.userService = userService;
         this.passwordEncoder = passwordEncoder;
-
     }
 
-    //Удаления юзера
-    @PostMapping("/deleteUser")
-    public String deleteUser(@RequestParam("id") int id) {
-        adminService.deleteUserById(id);
-        return "redirect:/users";
+    // Получить всех пользователей
+    @GetMapping
+    public List<User> getAllUsers() {
+        return userService.findAll();
     }
 
-    // Форма для добавления
-    @GetMapping("/addUserForm")
-    public String showAddForm(Model model) {
-        model.addAttribute("allRoles", roleService.getAllRoles());
-        return "addUser";
+    // Получить пользователя по ID
+    @GetMapping("/{id}")
+    public ResponseEntity<User> getUserById(@PathVariable Long id) {
+        return userService.findById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
-    @PostMapping("/addUser")
-    public String addUser(@RequestParam String username,
-                          @RequestParam String password,
-                          @RequestParam String name,
-                          @RequestParam String lastName,
-                          @RequestParam String email,
-                          @RequestParam Set<Long> roles) {
-
-        User user = new User();
-        user.setName(name);
-        user.setLastName(lastName);
-        user.setEmail(email);
-        user.setUsername(username);
-        user.setPassword(passwordEncoder.encode(password));
-
-        Set<Role> userRoles = roleService.findRolesByIds(roles);
-        user.setRoles(userRoles);
-
-        adminService.addUser(user);
-
-        System.out.println("Пользователь создан");
-        return "redirect:/users";
+    // Создать пользователя
+    @PostMapping
+    public ResponseEntity<User> createUser(@RequestBody User user) {
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        User savedUser = userService.save(user);
+        return ResponseEntity
+                .created(URI.create("/api/admin/users/" + savedUser.getId()))
+                .body(savedUser);
     }
 
+    // Обновить пользователя
+    @PutMapping("/{id}")
+    public User updateUser(@PathVariable Long id, @RequestBody User user) {
+        user.setId(id);
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        return userService.save(user);
+    }
+
+    // Удалить пользователя
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
+        userService.deleteById(id);
+        return ResponseEntity.noContent().build();
+    }
 }

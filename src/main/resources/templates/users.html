@@ -1,82 +1,150 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml"
-      xmlns:th="http://www.thymeleaf.org"
-      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="en">
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Users list</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Management</title>
     <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            line-height: 1.6;
+        }
         table {
-            border-collapse: collapse;
             width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
         }
         th, td {
-            border: 1px solid black;
-            padding: 8px;
+            border: 1px solid #ddd;
+            padding: 8px 12px;
             text-align: left;
         }
-        form.inline {
-            display: inline;
+        th {
+            background-color: #f2f2f2;
         }
-        .search-form {
-            margin-bottom: 20px;
+        .action-buttons button {
+            margin-right: 5px;
+            padding: 5px 10px;
+            cursor: pointer;
         }
-        .search-form input {
-            padding: 4px;
-            margin-right: 8px;
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            width: 400px;
+            max-width: 90%;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px;
+            background: #4CAF50;
+            color: white;
+            border-radius: 5px;
+            display: none;
+        }
+        .search-panel {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 5px;
         }
     </style>
 </head>
 <body>
-
-<div sec:authorize="isAuthenticated()">
-    <form th:action="@{/logout}" method="post">
-        <button type="submit" class="btn btn-link">Logout</button>
-    </form>
+<div class="header">
+    <h1>User Management System</h1>
+    <button id="logout-btn" class="logout-button">Logout</button>
 </div>
 
-<h1>Users List</h1>
+<div class="search-panel">
+    <h2>Search Users</h2>
+    <div class="search-form">
+        <input type="text" id="search-name" placeholder="Name">
+        <input type="text" id="search-email" placeholder="Email">
+        <button id="search-btn">Search</button>
+        <button id="reset-search-btn">Reset</button>
+    </div>
+</div>
 
-<!-- 🔍 Форма поиска -->
-<form class="search-form" th:action="@{/search}" method="get">
-    <input type="text" name="name" placeholder="Имя">
-    <input type="text" name="email" placeholder="Email">
-    <button type="submit">Поиск</button>
-    <a th:href="@{/users}">Сбросить</a>
-</form>
+<div class="user-actions">
+    <button id="add-user-btn">Add New User</button>
+</div>
 
-<table>
+<table id="users-table">
     <thead>
     <tr>
+        <th>ID</th>
         <th>Name</th>
-        <th>LastName</th>
+        <th>Last Name</th>
         <th>Email</th>
         <th>Actions</th>
     </tr>
     </thead>
-    <tbody>
-    <tr th:each="user : ${users}">
-        <td th:text="${user.name}">Name</td>
-        <td th:text="${user.lastName}">LastName</td>
-        <td th:text="${user.email}">Email</td>
-        <td>
-            <a th:href="@{/editUserForm(id=${user.id})}">Edit</a>
-
-            <span th:if="${#httpServletRequest.isUserInRole('ROLE_ADMIN')}">
-                    <form class="inline" th:action="@{/deleteUser(id=${user.id})}" method="post">
-                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-                        <button type="submit" onclick="return confirm('Удалить пользователя?')">Delete</button>
-                    </form>
-                </span>
-        </td>
-    </tr>
+    <tbody id="users-table-body">
+    <!-- Users will be loaded here dynamically -->
     </tbody>
 </table>
 
-<!-- Кнопка для перехода на форму добавления нового пользователя -->
-<form action="/addUserForm" method="get">
-    <button type="submit">Add new user</button>
-</form>
+<!-- Modal for Add/Edit User -->
+<div id="user-modal" class="modal">
+    <div class="modal-content">
+        <h2 id="modal-title">Add User</h2>
+        <form id="user-form">
+            <input type="hidden" id="user-id">
+            <div class="form-group">
+                <label for="name">Name:</label>
+                <input type="text" id="name" required>
+            </div>
+            <div class="form-group">
+                <label for="lastName">Last Name:</label>
+                <input type="text" id="lastName">
+            </div>
+            <div class="form-group">
+                <label for="email">Email:</label>
+                <input type="email" id="email" required>
+            </div>
+            <div class="form-actions">
+                <button type="button" id="save-user-btn">Save</button>
+                <button type="button" id="cancel-btn">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
 
+<!-- Notification Element -->
+<div id="notification" class="notification"></div>
+
+<!-- Load JavaScript -->
+<script src="/js/auth.js"></script>
+<script src="/js/user-service.js"></script>
+<script src="/js/main.js"></script>
 </body>
 </html>
