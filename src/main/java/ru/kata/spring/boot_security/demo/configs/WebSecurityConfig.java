@@ -9,50 +9,52 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.NoOpPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 
 @Configuration
 @EnableWebSecurity
 public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 
-    private final SuccessUserHandler successUserHandler;
     private final UserDetailsService userDetailsService;
 
     @Autowired
-    public WebSecurityConfig(SuccessUserHandler successUserHandler,
-                             UserDetailsService userDetailsService) {
-        this.successUserHandler = successUserHandler;
+    public WebSecurityConfig(UserDetailsService userDetailsService) {
         this.userDetailsService = userDetailsService;
     }
 
     @Override
     protected void configure(HttpSecurity http) throws Exception {
         http
+                .csrf()
+                .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                .and()
                 .authorizeRequests()
-                .antMatchers("/", "/login", "/css/**", "/js/**","/accessDenied").permitAll()
-                .antMatchers("/admin/**","/addUserForm", "/add",
-                        "/deleteUser","/editUserForm","/updateUser").hasRole("ADMIN")
-                .antMatchers("/user","/users").hasAnyRole("USER", "ADMIN")
+                .antMatchers("/", "/login", "/register", "/css/**", "/js/**", "/api/users/register","/static/**").permitAll()
+                .antMatchers("/api/admin/**").hasRole("ADMIN")
+                .antMatchers("/api/users/me").authenticated()
                 .anyRequest().authenticated()
                 .and()
                 .formLogin()
-                .loginPage("/login")
-                .loginProcessingUrl("/login")
-                .successHandler(successUserHandler)
-                .failureUrl("/login?error=true")
+                .loginPage("/login.html")
+                .loginProcessingUrl("/api/auth/login")
+                .defaultSuccessUrl("/", true)
+                .failureUrl("/login.html?error=true")
                 .permitAll()
                 .and()
                 .logout()
-                .logoutUrl("/logout")
-                .logoutSuccessUrl("/login?logout=true")
+                .logoutUrl("/api/auth/logout")
+                .logoutSuccessUrl("/login.html")
+                .deleteCookies("JSESSIONID")
                 .permitAll()
-                .and().exceptionHandling().accessDeniedPage("/accessDenied");
+                .and()
+                .exceptionHandling().accessDeniedPage("/accessDenied");
     }
 
     @Override
     protected void configure(AuthenticationManagerBuilder auth) throws Exception {
-        auth.userDetailsService(userDetailsService).passwordEncoder(passwordEncoder());
+        auth.userDetailsService(userDetailsService)
+                .passwordEncoder(passwordEncoder());
     }
 
     @Bean

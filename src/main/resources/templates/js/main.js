@@ -1,19 +1,36 @@
-// main.js
 document.addEventListener('DOMContentLoaded', async () => {
-    // Проверка авторизации
+    // Check authentication
     const currentUser = await AuthService.checkAuth();
     if (!currentUser) return;
 
-    // Загрузка пользователей
-    await loadAndRenderUsers();
+    // Load users if admin
+    if (document.getElementById('admin-panel').style.display === 'block') {
+        await loadUsers();
+        setupAdminEventListeners();
+    }
 
-    // Назначение обработчиков
-    setupEventListeners();
+    // Setup profile form
+    document.getElementById('profile-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const userData = {
+            name: document.getElementById('profile-name').value,
+            lastName: document.getElementById('profile-lastname').value,
+            password: document.getElementById('profile-password').value || null
+        };
+
+        try {
+            await UserService.updateCurrentUser(userData);
+            AuthService.showNotification('Profile updated successfully');
+        } catch (error) {
+            AuthService.showNotification(error.message, 'error');
+        }
+    });
 });
 
-async function loadAndRenderUsers(searchParams = {}) {
+async function loadUsers() {
     try {
-        const users = await UserService.fetchUsers(searchParams);
+        const users = await UserService.fetchUsers();
         renderUsers(users);
     } catch (error) {
         AuthService.showNotification(error.message, 'error');
@@ -40,22 +57,8 @@ function renderUsers(users) {
     });
 }
 
-function setupEventListeners() {
-    // Поиск
-    document.getElementById('search-btn').addEventListener('click', async () => {
-        const name = document.getElementById('search-name').value;
-        const email = document.getElementById('search-email').value;
-        await loadAndRenderUsers({ name, email });
-    });
-
-    // Сброс поиска
-    document.getElementById('reset-search-btn').addEventListener('click', () => {
-        document.getElementById('search-name').value = '';
-        document.getElementById('search-email').value = '';
-        loadAndRenderUsers();
-    });
-
-    // Добавление пользователя
+function setupAdminEventListeners() {
+    // Add user button
     document.getElementById('add-user-btn').addEventListener('click', () => {
         document.getElementById('modal-title').textContent = 'Add User';
         document.getElementById('user-form').reset();
@@ -63,31 +66,37 @@ function setupEventListeners() {
         document.getElementById('user-modal').style.display = 'flex';
     });
 
-    // Сохранение пользователя
+    // Save user (add/edit)
     document.getElementById('save-user-btn').addEventListener('click', async () => {
         const userData = {
             id: document.getElementById('user-id').value || null,
             name: document.getElementById('name').value,
             lastName: document.getElementById('lastName').value,
-            email: document.getElementById('email').value
+            email: document.getElementById('email').value,
+            password: document.getElementById('password').value
         };
 
         try {
-            await UserService.saveUser(userData);
+            if (userData.id) {
+                await UserService.updateUser(userData);
+            } else {
+                await UserService.createUser(userData);
+            }
+
             document.getElementById('user-modal').style.display = 'none';
-            await loadAndRenderUsers();
+            await loadUsers();
             AuthService.showNotification('User saved successfully');
         } catch (error) {
             AuthService.showNotification(error.message, 'error');
         }
     });
 
-    // Закрытие модального окна
+    // Cancel button
     document.getElementById('cancel-btn').addEventListener('click', () => {
         document.getElementById('user-modal').style.display = 'none';
     });
 
-    // Делегирование событий для кнопок в таблице
+    // Delegated events for edit/delete buttons
     document.getElementById('users-table').addEventListener('click', async (e) => {
         if (e.target.classList.contains('edit-btn')) {
             const userId = e.target.getAttribute('data-id');
@@ -98,6 +107,7 @@ function setupEventListeners() {
                 document.getElementById('name').value = user.name;
                 document.getElementById('lastName').value = user.lastName || '';
                 document.getElementById('email').value = user.email;
+                document.getElementById('password').value = '';
                 document.getElementById('user-modal').style.display = 'flex';
             } catch (error) {
                 AuthService.showNotification(error.message, 'error');
@@ -109,7 +119,7 @@ function setupEventListeners() {
                 const userId = e.target.getAttribute('data-id');
                 try {
                     await UserService.deleteUser(userId);
-                    await loadAndRenderUsers();
+                    await loadUsers();
                     AuthService.showNotification('User deleted successfully');
                 } catch (error) {
                     AuthService.showNotification(error.message, 'error');
