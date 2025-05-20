@@ -25,7 +25,8 @@ public class WebSecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
-        http.authorizeRequests()
+        http.csrf().disable()
+                .authorizeRequests()
                 .antMatchers("/login", "/login.html", "/app.js", "/index.html", "/css/**").permitAll()
                 .antMatchers(HttpMethod.GET, "/users/**").hasAnyRole("USER", "ADMIN")
                 .antMatchers(HttpMethod.POST, "/users").hasRole("ADMIN")
@@ -33,7 +34,9 @@ public class WebSecurityConfig {
                 .antMatchers(HttpMethod.DELETE, "/users/**").hasRole("ADMIN")
                 .anyRequest().authenticated()
                 .and()
-                .httpBasic()
+                .formLogin()
+                .loginPage("/login")
+                .defaultSuccessUrl("/index.html", true)
                 .and()
                 .logout(logout -> logout
                         .logoutUrl("/logout")
