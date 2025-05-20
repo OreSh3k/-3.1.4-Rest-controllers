@@ -11,6 +11,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 
+import javax.servlet.http.HttpServletResponse;
+
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
@@ -24,7 +26,6 @@ public class WebSecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-
         http.csrf().disable()
                 .authorizeRequests()
                 .antMatchers("/login", "/login.html", "/app.js", "/index.html", "/css/**").permitAll()
@@ -35,14 +36,26 @@ public class WebSecurityConfig {
                 .anyRequest().authenticated()
                 .and()
                 .formLogin()
-                .loginPage("/login")
-                .defaultSuccessUrl("/index.html", true)
+                .loginPage("/login.html")
+                .loginProcessingUrl("/login")
+                .defaultSuccessUrl("/", true)
+                .permitAll()
                 .and()
-                .logout(logout -> logout
-                        .logoutUrl("/logout")
-                        .logoutSuccessUrl("/login.html")
-                        .permitAll()
-                );
+                .logout()
+                .logoutUrl("/logout")
+                .logoutSuccessUrl("/login.html")
+                .permitAll()
+                .and()
+                .exceptionHandling()
+                .authenticationEntryPoint((request, response, authException) -> {
+                    String accept = request.getHeader("Accept");
+                    if ("XMLHttpRequest".equals(request.getHeader("X-Requested-With")) ||
+                            (accept != null && accept.contains("application/json"))) {
+                        response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized");
+                    } else {
+                        response.sendRedirect("/login.html");
+                    }
+                });
 
         return http.build();
     }

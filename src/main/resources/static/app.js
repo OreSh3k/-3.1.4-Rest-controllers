@@ -8,8 +8,8 @@ async function loadUsers() {
         credentials: 'include'
     });
 
-    if (!res.ok) {
-        alert("Не удалось загрузить пользователей");
+    if (res.status === 401) {
+        window.location.href = '/login.html';
         return;
     }
 
@@ -24,9 +24,7 @@ async function loadUsers() {
             `<td>${user.id}</td>
              <td>${user.name} ${user.lastName}</td>
              <td>${user.email}</td>
-             <td>
-                <button onclick="deleteUser(${user.id})">Delete</button>
-             </td>`;
+             <td><button onclick="deleteUser(${user.id})">Delete</button></td>`;
         table.appendChild(row);
     });
 }
@@ -38,18 +36,16 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
     });
 
     if (res.ok) {
-        window.location.href = '/login.html'; // перенаправляем на страницу логина
+        window.location.href = '/login.html';
     } else {
         alert('Ошибка при выходе');
     }
 });
 
-
 async function createUser() {
     const user = {
         name: document.getElementById('newName').value,
         lastName: document.getElementById('newLastName').value,
-        age: parseInt(document.getElementById('newAge').value),
         email: document.getElementById('newEmail').value,
         password: document.getElementById('newPassword').value
     };
@@ -63,10 +59,15 @@ async function createUser() {
         body: JSON.stringify(user)
     });
 
+    if (res.status === 401) {
+        window.location.href = '/login.html';
+        return;
+    }
+
     if (res.ok) {
         loadUsers();
     } else {
-        alert('Не удалось создать пользователя (возможно, недостаточно прав)');
+        alert('Не удалось создать пользователя');
     }
 }
 
@@ -76,14 +77,18 @@ async function deleteUser(id) {
         credentials: 'include'
     });
 
+    if (res.status === 401) {
+        window.location.href = '/login.html';
+        return;
+    }
+
     if (res.ok) {
         loadUsers();
     } else {
-        alert('Удаление не удалось (возможно, недостаточно прав)');
+        alert('Удаление не удалось');
     }
 }
 
-// Этот метод "проверяет", админ ли пользователь, создавая временного пользователя
 async function detectRole() {
     const tempUser = {
         name: "check",
@@ -103,10 +108,8 @@ async function detectRole() {
     });
 
     if (res.status === 201) {
-        // Показываем админские элементы
         document.getElementById('adminControls').style.display = 'block';
 
-        // Удалим временного пользователя
         const userList = await fetch('/users', {
             credentials: 'include'
         }).then(r => r.json());
