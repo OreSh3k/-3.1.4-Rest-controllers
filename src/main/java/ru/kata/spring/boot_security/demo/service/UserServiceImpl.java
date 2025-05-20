@@ -2,17 +2,16 @@ package ru.kata.spring.boot_security.demo.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import ru.kata.spring.boot_security.demo.model.User;
 import ru.kata.spring.boot_security.demo.repository.UserRepository;
 
+import javax.transaction.Transactional;
 import java.util.List;
 
-@Transactional
 @Service
+@Transactional
 public class UserServiceImpl implements UserService {
-
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
 
     @Autowired
     public UserServiceImpl(UserRepository userRepository) {
@@ -20,32 +19,31 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public List<User> getAllUsers() {
+    public void createUser(User user) {
+     userRepository.save(user);
+    }
+
+    @Override
+    public List<User> readAllUsers() {
         return userRepository.findAll();
     }
 
     @Override
-    public User getUserById(int id) {
+    public User readUser(int id) {
         return userRepository.findUserById(id);
     }
 
     @Override
-    public User addUser(User user) {
-        return userRepository.save(user);
+    public boolean updateUser(User user, int id) {
+        if(userRepository.findUserById(id) != null) {
+            userRepository.save(user);
+            return true;
+        }
+        return false;
     }
 
     @Override
-    public User updateUser(User user) {
-        return userRepository.save(user);
-    }
-
-    @Override
-    public void deleteUser(int id) {
-        userRepository.deleteById(id);
-    }
-
-    @Override
-    public User findByEmail(String email) {
-       return userRepository.findByEmail(email);
+    public boolean deleteUser(int id) {
+         return userRepository.deleteUserById(id);
     }
 }
