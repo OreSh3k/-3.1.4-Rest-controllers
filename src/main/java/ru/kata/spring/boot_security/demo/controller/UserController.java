@@ -26,7 +26,7 @@ public class UserController {
 
     @GetMapping("/")
     public String index() {
-        return "forward:/index.html"; // Перенаправляем на ваш HTML-файл
+        return "forward:/index.html"; // Перенаправляем на HTML-файл
     }
 
     //Чисто для всех
