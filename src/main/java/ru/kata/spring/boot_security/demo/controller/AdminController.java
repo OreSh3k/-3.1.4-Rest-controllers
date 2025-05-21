@@ -29,7 +29,7 @@ public class AdminController {
         return update ? new ResponseEntity<>(HttpStatus.OK) : new ResponseEntity<>(HttpStatus.BAD_REQUEST);
     }
 
-    @DeleteMapping("/users/{id}")
+    @DeleteMapping("/users/delete/{id}")
     public ResponseEntity<?> deleteUser(@PathVariable(name = "id") int id) {
         boolean delete = adminService.deleteUser(id);
 
