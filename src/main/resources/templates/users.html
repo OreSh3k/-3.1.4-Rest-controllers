@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.w3.org/1999/xhtml" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Users list</title>
+    <style>
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        th, td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: left;
+        }
+        form.inline {
+            display: inline;
+        }
+        .search-form {
+            margin-bottom: 20px;
+        }
+        .search-form input {
+            padding: 4px;
+            margin-right: 8px;
+        }
+    </style>
+</head>
+<body>
+
+<div sec:authorize="isAuthenticated()">
+    <form th:action="@{/logout}" method="post">
+        <button type="submit" class="btn btn-link">Logout</button>
+    </form>
+</div>
+
+<h1>Users List</h1>
+
+<!-- 🔍 Форма поиска -->
+<form class="search-form" th:action="@{/search}" method="get">
+    <input type="text" name="name" placeholder="Имя">
+    <input type="text" name="email" placeholder="Email">
+    <button type="submit">Поиск</button>
+    <a th:href="@{/users}">Сбросить</a>
+</form>
+
+<table>
+    <thead>
+    <tr>
+        <th>Name</th>
+        <th>LastName</th>
+        <th>Email</th>
+        <th>Actions</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="user : ${users}">
+        <td th:text="${user.name}">Name</td>
+        <td th:text="${user.lastName}">LastName</td>
+        <td th:text="${user.email}">Email</td>
+        <td>
+            <a th:href="@{/editUserForm(id=${user.id})}">Edit</a>
+            |
+            <form class="inline" th:action="@{/deleteUser(id=${user.id})}" method="post">
+                <button type="submit" onclick="return confirm('Delete user?')">Delete</button>
+            </form>
+        </td>
+    </tr>
+    </tbody>
+</table>
+
+<!-- Кнопка для перехода на форму добавления нового пользователя -->
+<form action="/addUserForm" method="get">
+    <button type="submit">Add new user</button>
+</form>
+
+</body>
+</html>
