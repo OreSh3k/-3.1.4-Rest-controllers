@@ -1,63 +1,58 @@
 package ru.kata.spring.boot_security.demo.configs;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
-import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.NoOpPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-
-import javax.servlet.http.HttpServletResponse;
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity
-public class WebSecurityConfig {
+public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 
+    private final SuccessUserHandler successUserHandler;
     private final UserDetailsService userDetailsService;
 
-    public WebSecurityConfig(UserDetailsService userDetailsService) {
+    @Autowired
+    public WebSecurityConfig(SuccessUserHandler successUserHandler,
+                             UserDetailsService userDetailsService) {
+        this.successUserHandler = successUserHandler;
         this.userDetailsService = userDetailsService;
     }
 
-    @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http.csrf().disable()
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        http
                 .authorizeRequests()
-                .antMatchers("/login", "/login.html", "/app.js", "/index.html", "/css/**").permitAll()
-                .antMatchers(HttpMethod.GET, "/users/**").hasAnyRole("USER", "ADMIN")
-                .antMatchers(HttpMethod.POST, "/users").hasRole("ADMIN")
-                .antMatchers(HttpMethod.PUT, "/users/**").hasRole("ADMIN")
-                .antMatchers(HttpMethod.DELETE, "/users/**").hasRole("ADMIN")
+                .antMatchers("/", "/login", "/css/**", "/js/**","/accessDenied").permitAll()
+                .antMatchers("/admin/**","/addUserForm", "/add",
+                        "/deleteUser","/editUserForm","/updateUser").hasRole("ADMIN")
+                .antMatchers("/user","/users").hasAnyRole("USER", "ADMIN")
                 .anyRequest().authenticated()
                 .and()
                 .formLogin()
-                .loginPage("/login.html")
+                .loginPage("/login")
                 .loginProcessingUrl("/login")
-                .defaultSuccessUrl("/", true)
+                .successHandler(successUserHandler)
+                .failureUrl("/login?error=true")
                 .permitAll()
                 .and()
                 .logout()
                 .logoutUrl("/logout")
-                .logoutSuccessUrl("/login.html")
+                .logoutSuccessUrl("/login?logout=true")
                 .permitAll()
-                .and()
-                .exceptionHandling()
-                .authenticationEntryPoint((request, response, authException) -> {
-                    String accept = request.getHeader("Accept");
-                    if ("XMLHttpRequest".equals(request.getHeader("X-Requested-With")) ||
-                            (accept != null && accept.contains("application/json"))) {
-                        response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized");
-                    } else {
-                        response.sendRedirect("/login.html");
-                    }
-                });
+                .and().exceptionHandling().accessDeniedPage("/accessDenied");
+    }
 
-        return http.build();
+    @Override
+    protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+        auth.userDetailsService(userDetailsService).passwordEncoder(passwordEncoder());
     }
 
     @Bean

@@ -15,12 +15,15 @@ public class DataInitializer implements CommandLineRunner {
 
     private final UserService userService;
     private final RoleRepository roleRepository;
+    private final AdminService adminService;
 
     @Autowired
     public DataInitializer(UserService userService,
-                           RoleRepository roleRepository) {
+                           RoleRepository roleRepository,
+                           AdminService adminService) {
         this.userService = userService;
         this.roleRepository = roleRepository;
+        this.adminService = adminService;
     }
 
     @Override
@@ -47,7 +50,7 @@ public class DataInitializer implements CommandLineRunner {
             admin.setEmail("admin@mail.com");
             admin.setRoles(Set.of(adminRole, userRole));
 
-            userService.createUser(admin);
+            adminService.createUser(admin);
             System.out.println("Создан администратор: admin / admin");
         }
     }
